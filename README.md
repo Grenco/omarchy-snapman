@@ -68,6 +68,25 @@ plugin's retention installer prints a reminder pointing back here. Editing the
 retention policy still prompts for sudo, because it rewrites
 `/etc/snapper/configs/root`.
 
+## Removal
+
+```sh
+omarchy plugin remove grenco.snapman
+```
+
+The retention timer and helper scripts are user-owned, so the plugin command
+does not remove them. To clean those up as well:
+
+```sh
+systemctl --user disable --now snapman-retention.timer
+rm -f ~/.local/bin/snapman-retention \
+      ~/.local/bin/omarchy-snapman-tui \
+      ~/.config/systemd/user/snapman-retention.service \
+      ~/.config/systemd/user/snapman-retention.timer
+rm -f ~/.config/omarchy/snapman.conf   # saved retention policy (optional)
+systemctl --user daemon-reload
+```
+
 ## Keys
 
 ```
@@ -83,3 +102,7 @@ In the Cleanup view: `H`/`L` switch tabs, `Esc` or **← Close** goes back.
   (`snapman-retention.timer`, daily at 06:00) and a helper script under
   `~/.local/bin/snapman-retention`. Count mode disables the timer.
 - Policy state is kept in `~/.config/omarchy/snapman.conf`.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
