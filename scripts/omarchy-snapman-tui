@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+set -u
+
+title="Snapman"
+config=""
+
+require() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    printf '%s is required but is not installed.\n' "$1"
+    printf 'Install it, then run this tool again.\n'
+    read -r -p 'Press Enter to close... '
+    exit 1
+  fi
+}
+
+pause() {
+  printf '\n'
+  read -r -p 'Press Enter to continue... '
+}
+
+run_paged() {
+  clear
+  printf '%s\n\n' "$title"
+  "$@" 2>&1 | less -R
+}
+
+message() {
+  clear
+  printf '%s\n\n%s\n' "$title" "$1"
+  pause
+}
+
+choose_config() {
+  local selected
+  selected=$(snapper list-configs 2>/dev/null | sed '1,2d' | fzf --prompt='Snapper config > ' --height=80% --border --reverse)
+  if [[ -n "$selected" ]]; then
+    config=$(awk '{print $1}' <<<"$selected")
+  fi
+}
+
+snapshot_lines() {
+  snapper -c "$config" list --disable-used-space 2>/dev/null | sed '1,2d'
+}
+
+choose_snapshot() {
+  local prompt="${1:-Snapshot > }"
+  local selected
+  selected=$(snapshot_lines | fzf --prompt="$prompt" --height=80% --border --reverse)
+  [[ -n "$selected" ]] || return 1
+  awk '{print $1}' <<<"$selected"
+}
+
+create_snapshot() {
+  local description
+  clear
+  printf '%s\n\nCreate snapshot in config: %s\n\n' "$title" "$config"
+  read -r -p 'Description: ' description
+  [[ -n "$description" ]] || description='Manual snapshot from Snapman TUI'
+  snapper -c "$config" create --description "$description"
+  pause
+}
+
+delete_snapshot() {
+  local number confirm
+  number=$(choose_snapshot 'Delete snapshot > ') || return
+  if [[ "$number" == "0" ]]; then
+    message 'Snapshot 0 is the live filesystem and cannot be deleted.'
+    return
+  fi
+  clear
+  printf '%s\n\nDelete snapshot %s from %s?\n' "$title" "$number" "$config"
+  read -r -p 'Type yes to delete: ' confirm
+  [[ "$confirm" == "yes" ]] || return
+  snapper -c "$config" delete "$number"
+  pause
+}
+
+cleanup_snapshots() {
+  local cleanup
+  cleanup=$(printf 'number\ntimeline\nempty-pre-post\n' | fzf --prompt='Cleanup algorithm > ' --height=40% --border --reverse)
+  [[ -n "$cleanup" ]] || return
+  snapper -c "$config" cleanup "$cleanup"
+  pause
+}
+
+compare_snapshots() {
+  local from to
+  from=$(choose_snapshot 'Compare from > ') || return
+  to=$(choose_snapshot 'Compare to (choose 0 for current) > ') || return
+  run_paged snapper -c "$config" status "$from..$to"
+}
+
+show_diff() {
+  local from to
+  from=$(choose_snapshot 'Diff from > ') || return
+  to=$(choose_snapshot 'Diff to (choose 0 for current) > ') || return
+  run_paged snapper -c "$config" diff "$from..$to"
+}
+
+restore_changes() {
+  local from to confirm
+  from=$(choose_snapshot 'Restore from > ') || return
+  to=$(choose_snapshot 'Restore to (usually 0/current) > ') || return
+  clear
+  printf '%s\n\nThis will run: snapper -c %s undochange %s..%s\n\n' "$title" "$config" "$from" "$to"
+  printf 'This can overwrite files in the live filesystem.\n'
+  read -r -p 'Type RESTORE to continue: ' confirm
+  [[ "$confirm" == "RESTORE" ]] || return
+  snapper -c "$config" undochange "$from..$to"
+  pause
+}
+
+main_menu() {
+  local action
+  while true; do
+    [[ -n "$config" ]] || choose_config
+    [[ -n "$config" ]] || exit 0
+
+    action=$(printf '%s\n' \
+      'List snapshots' \
+      'Create snapshot' \
+      'Compare snapshots' \
+      'Show full diff' \
+      'Restore changed files' \
+      'Delete snapshot' \
+      'Run cleanup' \
+      'Switch config' \
+      'Quit' | fzf --prompt="$config > " --height=80% --border --reverse)
+
+    case "$action" in
+      'List snapshots') run_paged snapper -c "$config" list --disable-used-space ;;
+      'Create snapshot') create_snapshot ;;
+      'Compare snapshots') compare_snapshots ;;
+      'Show full diff') show_diff ;;
+      'Restore changed files') restore_changes ;;
+      'Delete snapshot') delete_snapshot ;;
+      'Run cleanup') cleanup_snapshots ;;
+      'Switch config') config="" ;;
+      'Quit'|'') exit 0 ;;
+    esac
+  done
+}
+
+require snapper
+require fzf
+require less
+
+main_menu

@@ -1,0 +1,9 @@
+[Unit]
+Description=Snapman snapshot retention cleanup timer
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

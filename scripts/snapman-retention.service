@@ -1,0 +1,6 @@
+[Unit]
+Description=Snapman snapshot retention cleanup
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/snapman-retention

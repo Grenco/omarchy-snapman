@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "grenco.snapman",
+  "name": "Snapman",
+  "version": "1.1.0",
+  "author": "Grenco",
+  "description": "Compact Snapper snapshot manager: list, diff, create, restore, boot, and delete snapshots, with a persistent retention policy and bulk cleanup.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Snapman",
+    "description": "List, diff, create, restore, boot into, and delete Snapper snapshots from a compact panel. Set a persistent retention policy by count or age, or run one-shot bulk deletes.",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
