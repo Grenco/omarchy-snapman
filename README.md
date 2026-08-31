@@ -32,6 +32,12 @@ the panel, with vim bindings throughout — including `H`/`L` to switch the choi
 on confirmation dialogs. A standalone TUI (`omarchy-snapman-tui`, requires `fzf`
 + `less`) is included as a bonus.
 
+### Pinned snapshots
+
+Pin a snapshot (`P`, or the **Pin** button) to protect it from retention
+cleanup. Snapper marks it *important*, so it survives the count-based policy
+and the daily age-based timer skips it. Unpin to let it age out normally.
+
 ### Update awareness
 
 When an update is available, the panel links to its diff and marketplace page

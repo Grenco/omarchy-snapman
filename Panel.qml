@@ -99,9 +99,13 @@ Panel {
     return bootableById[String(Number(s.number))] === true
   }
 
+  function isPersistent(s) {
+    return !!s && !!s.userdata && String(s.userdata.important) === "yes"
+  }
+
   function defaultHint() {
     return (diskUsage !== "" ? diskUsage + "\n" : "") +
-      "J/K select  C new  D/Enter diff  X delete  B boot  R restore\n" +
+      "J/K select  C new  D/Enter diff  X delete  B boot  R restore  P pin\n" +
       "S cleanup  F filter  G refresh  Q/Esc close"
   }
 
@@ -337,6 +341,16 @@ Panel {
     actionProcess.running = true
   }
 
+  function togglePersistent() {
+    if (!selected || persistProcess.running) return
+    var number = Number(selected.number)
+    var pin = !isPersistent(selected)
+    statusMessage = "Working..."
+    persistProcess.successMessage = (pin ? "Pinned" : "Unpinned") + " snapshot #" + number + " against retention cleanup."
+    persistProcess.command = ["snapper", "-c", "root", "modify", "--userdata", pin ? "important=yes" : "important=", String(number)]
+    persistProcess.running = true
+  }
+
   function openFullDiff() {
     if (!selected) return
     diffLauncher.command = [
@@ -423,7 +437,7 @@ Panel {
   function applyRetention() {
     var value = root.retentionMode === "count" ? root.retentionCountValue : root.retentionAgeValue
     var limit = root.retentionMode === "count" ? value : 999
-    var sudoCmd = "sudo sed -i 's/^NUMBER_LIMIT=.*/NUMBER_LIMIT=\"" + limit + "\"/; s/^NUMBER_LIMIT_IMPORTANT=.*/NUMBER_LIMIT_IMPORTANT=\"" + limit + "\"/' /etc/snapper/configs/root && sudo snapper -c root cleanup number"
+    var sudoCmd = "sudo sed -i 's/^NUMBER_LIMIT=.*/NUMBER_LIMIT=\"" + limit + "\"/; s/^NUMBER_LIMIT_IMPORTANT=.*/NUMBER_LIMIT_IMPORTANT=\"999\"/' /etc/snapper/configs/root && sudo snapper -c root cleanup number"
     retentionLauncher.command = ["omarchy-launch-floating-terminal-with-presentation", sudoCmd]
     retentionLauncher.startDetached()
 
@@ -514,6 +528,16 @@ Panel {
       root.statusMessage = exitCode === 0
         ? successMessage + " Limine entries will update automatically."
         : (errorOutput || "Snapper action failed.")
+      root.refresh(true)
+    }
+  }
+
+  Process {
+    id: persistProcess
+    property string successMessage: ""
+    stderr: StdioCollector { waitForEnd: true; onStreamFinished: root.statusMessage = String(text).trim() || root.statusMessage }
+    onExited: function(code) {
+      root.statusMessage = code === 0 ? successMessage : (root.statusMessage || "Could not update snapshot flags.")
       root.refresh(true)
     }
   }
@@ -634,6 +658,7 @@ Panel {
         else if (lower === "d") root.openFullDiff()
         else if (lower === "r") root.requestRestore()
         else if (lower === "b") root.requestBootNext()
+        else if (lower === "p") root.togglePersistent()
         else if (lower === "s") root.openCleanup()
         else if (lower === "f") { filterField.forceActiveFocus(); filterField.selectAll() }
         else if (lower === "g") root.refresh(true)
@@ -808,6 +833,18 @@ Panel {
             onClicked: root.requestRestore()
           }
           Button {
+            text: root.hasSelection && root.isPersistent(root.selected) ? "Unpin" : "Pin"
+            foreground: root.foreground
+            accent: Color.accent
+            fontFamily: root.fontFamily
+            fontSize: Style.font.caption
+            horizontalPadding: Style.space(6)
+            verticalPadding: Style.space(2)
+            bordered: true
+            enabled: root.hasSelection
+            onClicked: root.togglePersistent()
+          }
+          Button {
             text: "Delete"
             foreground: root.foreground
             accent: Color.urgent
@@ -938,8 +975,19 @@ Panel {
                   font.pixelSize: Style.font.bodySmall
                 }
 
+                Text {
+                  width: Style.space(24)
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: "PIN"
+                  visible: root.isPersistent(modelData)
+                  color: Color.accent
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                }
+
                 Column {
-                  width: parent.width - Style.space(30) - Style.space(12) - Style.space(6) - (sizeText.visible ? sizeText.width + Style.space(6) : 0) - Style.space(16)
+                  width: parent.width - Style.space(30) - Style.space(12) - Style.space(6) - (root.isPersistent(modelData) ? Style.space(24) + Style.space(6) : 0) - (sizeText.visible ? sizeText.width + Style.space(6) : 0) - Style.space(16)
                   anchors.verticalCenter: parent.verticalCenter
                   Text {
                     width: parent.width
