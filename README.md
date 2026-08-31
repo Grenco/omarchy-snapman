@@ -40,9 +40,9 @@ and the daily age-based timer skips it. Unpin to let it age out normally.
 
 ### Update awareness
 
-When an update is available, the panel links to its diff and marketplace page
-and shows whether that exact commit matches the marketplace's verified snapshot.
-Updates use Omarchy's standard review-and-confirm flow.
+When an update is available, the panel shows a verification label and offers
+**Diff** to preview the changes on GitHub and **Update** to apply the
+fast-forward directly. **Store** keeps the marketplace page one click away.
 
 ## Requirements
 
