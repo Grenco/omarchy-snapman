@@ -24,7 +24,7 @@ age)
     (( ts < cutoff )) && to_delete+=("$num")
   done < <(
     snapper -c root --jsonout --no-headers list --disable-used-space 2>/dev/null |
-      jq -r '.root[] | select(.number != 0 and .date != "") | "\(.number)\t\(.date)"'
+      jq -r '.root[] | select(.number != 0 and .date != "" and (.userdata.important // "") != "yes") | "\(.number)\t\(.date)"'
   )
   if (( ${#to_delete[@]} > 0 )); then
     snapper -c root delete "${to_delete[@]}" >/dev/null 2>&1 || true
