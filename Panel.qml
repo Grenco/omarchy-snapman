@@ -787,10 +787,13 @@ Panel {
             delegate: Rectangle {
               required property var modelData
               required property int index
+              readonly property bool isSelected: index === root.selectedIndex
+              readonly property color rowForeground: isSelected ? Style.selectedStateColor(root.foreground, Color.accent, false) : root.foreground
+              readonly property color rowMuted: isSelected ? Style.selectedStateColor(root.muted, Color.accent, false) : root.muted
               width: ListView.view.width
               height: Style.space(36)
               radius: 4
-              color: index === root.selectedIndex ? Qt.lighter(Color.accent, 1.15) : "transparent"
+              color: isSelected ? Style.selectedFillFor(root.foreground, Color.accent, false) : "transparent"
 
               Row {
                 anchors.fill: parent
@@ -802,7 +805,7 @@ Panel {
                   width: Style.space(30)
                   anchors.verticalCenter: parent.verticalCenter
                   text: "#" + modelData.number
-                  color: root.foreground
+                  color: rowForeground
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.bodySmall
                   font.bold: true
@@ -823,7 +826,7 @@ Panel {
                   Text {
                     width: parent.width
                     text: modelData.description || "Untitled snapshot"
-                    color: root.foreground
+                    color: rowForeground
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.bodySmall
                     elide: Text.ElideRight
@@ -831,7 +834,7 @@ Panel {
                   Text {
                     width: parent.width
                     text: (root.relativeAge(modelData.date) ? root.relativeAge(modelData.date) + " · " : "") + (modelData.date || "Unknown date")
-                    color: root.muted
+                    color: rowMuted
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
                     elide: Text.ElideRight
@@ -843,7 +846,7 @@ Panel {
                   anchors.verticalCenter: parent.verticalCenter
                   text: root.formatSize(modelData["used-space"])
                   visible: text !== ""
-                  color: root.muted
+                  color: rowMuted
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
                 }
