@@ -151,10 +151,10 @@ Panel {
     }
   }
 
-  function reviewAndUpdate() {
+  function applyUpdate() {
     updateLauncher.command = [
       "omarchy-launch-floating-terminal-with-presentation",
-      "omarchy plugin update grenco.snapman"
+      "omarchy plugin update grenco.snapman --yes"
     ]
     updateLauncher.startDetached()
   }
@@ -734,7 +734,7 @@ Panel {
             }
             Button {
               text: "Update"
-              tooltipText: "Fetch and apply the update after review"
+              tooltipText: "Apply the update now"
               foreground: root.foreground
               accent: Color.accent
               fontFamily: root.fontFamily
@@ -742,7 +742,7 @@ Panel {
               horizontalPadding: Style.space(6)
               verticalPadding: Style.space(2)
               bordered: true
-              onClicked: root.reviewAndUpdate()
+              onClicked: root.applyUpdate()
             }
             Button {
               text: "Diff"
