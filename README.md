@@ -32,6 +32,12 @@ the panel, with vim bindings throughout — including `H`/`L` to switch the choi
 on confirmation dialogs. A standalone TUI (`omarchy-snapman-tui`, requires `fzf`
 + `less`) is included as a bonus.
 
+### Update awareness
+
+When an update is available, the panel links to its diff and marketplace page
+and shows whether that exact commit matches the marketplace's verified snapshot.
+Updates use Omarchy's standard review-and-confirm flow.
+
 ## Requirements
 
 - `snapper` with a `root` config, and your user in `ALLOW_USERS` (so deletes and

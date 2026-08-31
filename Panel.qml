@@ -42,6 +42,15 @@ Panel {
   property bool ageTimerActive: false
   property int pendingBulkCount: 0
   property var pendingBulkNumbers: []
+  property string updateOutput: ""
+  property string updateState: "idle"
+  property string installedVersion: ""
+  property string availableVersion: ""
+  property string localCommit: ""
+  property string remoteCommit: ""
+  property string verificationLabel: ""
+  property bool verificationVerified: false
+  property double lastUpdateCheckAt: 0
 
   readonly property bool hasSelection: filteredSnapshots.length > 0 && selectedIndex >= 0 && selectedIndex < filteredSnapshots.length
   readonly property var selected: hasSelection ? filteredSnapshots[selectedIndex] : null
@@ -103,6 +112,7 @@ Panel {
   function open() {
     controller.show()
     refresh()
+    checkForUpdates()
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
   }
 
@@ -112,6 +122,51 @@ Panel {
   function switchPanel(direction) {
     if (bar && typeof bar.switchPanelFrom === "function") return bar.switchPanelFrom(barIdentity, direction)
     return false
+  }
+
+  function checkForUpdates(force) {
+    if (updateCheckProcess.running || (!force && lastUpdateCheckAt > 0 && Date.now() - lastUpdateCheckAt < 900000)) return
+    updateState = "checking"
+    updateOutput = ""
+    updateCheckProcess.running = true
+  }
+
+  function loadUpdateStatus(raw) {
+    lastUpdateCheckAt = Date.now()
+    try {
+      var info = JSON.parse(raw)
+      updateState = info.state || "error"
+      installedVersion = info.installedVersion || ""
+      availableVersion = info.availableVersion || ""
+      localCommit = info.localCommit || ""
+      remoteCommit = info.remoteCommit || ""
+      verificationLabel = info.verificationLabel || "Unverified"
+      verificationVerified = info.verificationVerified === true
+    } catch (error) {
+      updateState = "error"
+    }
+  }
+
+  function reviewAndUpdate() {
+    updateLauncher.command = [
+      "omarchy-launch-floating-terminal-with-presentation",
+      "omarchy plugin update grenco.snapman"
+    ]
+    updateLauncher.startDetached()
+  }
+
+  function openUpdateDiff() {
+    if (!localCommit || !remoteCommit) return
+    browserLauncher.command = [
+      "omarchy-launch-browser",
+      "https://github.com/Grenco/omarchy-snapman/compare/" + localCommit + "..." + remoteCommit
+    ]
+    browserLauncher.startDetached()
+  }
+
+  function openMarketplace() {
+    browserLauncher.command = ["omarchy-launch-browser", "https://omarchyplugins.com/plugin.html?id=grenco.snapman"]
+    browserLauncher.startDetached()
   }
 
   function refresh(clearPreviewCache) {
@@ -467,6 +522,23 @@ Panel {
   Process { id: bootLauncher }
 
   Process {
+    id: updateCheckProcess
+    command: ["sh", "-c", "bash \"$HOME/.config/omarchy/plugins/grenco.snapman/scripts/snapman-update-status\""]
+    stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.updateOutput = text }
+    stderr: StdioCollector { waitForEnd: true }
+    onExited: function(exitCode) {
+      if (exitCode === 0) root.loadUpdateStatus(root.updateOutput)
+      else {
+        root.lastUpdateCheckAt = Date.now()
+        root.updateState = "error"
+      }
+    }
+  }
+
+  Process { id: updateLauncher }
+  Process { id: browserLauncher }
+
+  Process {
     id: retentionReadProcess
     command: ["sh", "-c", "cat \"$HOME/.config/omarchy/snapman.conf\" 2>/dev/null || true"]
     stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.parseRetentionConf(text) }
@@ -619,6 +691,52 @@ Panel {
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             color: root.muted
+          }
+          Flow {
+            width: parent.width
+            spacing: Style.space(6)
+            visible: root.updateState === "available"
+
+            Text {
+              height: Style.space(20)
+              verticalAlignment: Text.AlignVCenter
+              text: "Snapman " + (root.availableVersion ? "v" + root.availableVersion : "update") + " available  ·  " + root.verificationLabel
+              color: root.verificationVerified ? Color.accent : Color.urgent
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+            }
+            Button {
+              text: "Update"
+              foreground: root.foreground
+              accent: Color.accent
+              fontFamily: root.fontFamily
+              fontSize: Style.font.caption
+              horizontalPadding: Style.space(6)
+              verticalPadding: Style.space(2)
+              bordered: true
+              onClicked: root.reviewAndUpdate()
+            }
+            Button {
+              text: "Diff"
+              foreground: root.foreground
+              fontFamily: root.fontFamily
+              fontSize: Style.font.caption
+              horizontalPadding: Style.space(6)
+              verticalPadding: Style.space(2)
+              bordered: true
+              onClicked: root.openUpdateDiff()
+            }
+            Button {
+              text: "Store"
+              foreground: root.foreground
+              fontFamily: root.fontFamily
+              fontSize: Style.font.caption
+              horizontalPadding: Style.space(6)
+              verticalPadding: Style.space(2)
+              bordered: true
+              onClicked: root.openMarketplace()
+            }
           }
         }
 
