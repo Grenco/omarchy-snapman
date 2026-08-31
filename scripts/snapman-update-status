@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -u
+
+plugin_dir="${SNAPMAN_PLUGIN_DIR:-$HOME/.config/omarchy/plugins/grenco.snapman}"
+catalog_url="${SNAPMAN_CATALOG_URL:-https://omarchyplugins.com/catalog.json}"
+
+local_commit=$(git -C "$plugin_dir" rev-parse HEAD 2>/dev/null || true)
+local_version=$(jq -r '.version // ""' "$plugin_dir/manifest.json" 2>/dev/null || true)
+
+if [[ -z "$local_commit" ]] || ! git -C "$plugin_dir" fetch --quiet origin HEAD 2>/dev/null; then
+  jq -n --arg version "$local_version" '{state:"error", installedVersion:$version}'
+  exit 0
+fi
+
+remote_commit=$(git -C "$plugin_dir" rev-parse FETCH_HEAD 2>/dev/null || true)
+remote_version=$(git -C "$plugin_dir" show "${remote_commit}:manifest.json" 2>/dev/null | jq -r '.version // ""' 2>/dev/null || true)
+
+if [[ "$local_commit" == "$remote_commit" ]]; then
+  state="current"
+elif git -C "$plugin_dir" merge-base --is-ancestor "$local_commit" "$remote_commit" 2>/dev/null; then
+  state="available"
+else
+  state="local-changes"
+fi
+
+verification_label="Unverified"
+verification_verified="false"
+catalog=$(curl --connect-timeout 3 --max-time 8 -fsSL "$catalog_url" 2>/dev/null || true)
+if [[ -n "$catalog" ]]; then
+  verification_status=$(jq -r '.plugins[] | select(.id == "grenco.snapman") | .verificationStatus // "unverified"' <<<"$catalog")
+  verification_commit=$(jq -r '.plugins[] | select(.id == "grenco.snapman") | .verificationCommit // ""' <<<"$catalog")
+  if [[ "$verification_status" == "verified" && "$verification_commit" == "$remote_commit" ]]; then
+    verification_label="Snapshot verified"
+    verification_verified="true"
+  elif [[ "$verification_status" == "verified" && -n "$verification_commit" ]]; then
+    verification_label="Update unverified"
+  fi
+fi
+
+jq -n \
+  --arg state "$state" \
+  --arg installedVersion "$local_version" \
+  --arg availableVersion "$remote_version" \
+  --arg localCommit "$local_commit" \
+  --arg remoteCommit "$remote_commit" \
+  --arg verificationLabel "$verification_label" \
+  --argjson verificationVerified "$verification_verified" \
+  '{state:$state, installedVersion:$installedVersion, availableVersion:$availableVersion, localCommit:$localCommit, remoteCommit:$remoteCommit, verificationLabel:$verificationLabel, verificationVerified:$verificationVerified}'
