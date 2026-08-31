@@ -1,13 +1,9 @@
 # Snapman
 
-Snapper is excellent system insurance, but its recovery points are easy to
-forget until something breaks, and old snapshots can quietly consume disk
-space. Snapman makes snapshots an everyday part of Omarchy: inspect what
-changed, create or restore a known-good state, boot into one when necessary,
-and enforce retention without memorizing Snapper commands.
-
-Everything lives in a compact, keyboard-first shell panel, so recovery and
-cleanup stay visible without interrupting your workflow.
+Snapman brings Snapper snapshot management to the Omarchy shell bar. It keeps
+recovery points visible and cleanup easy to manage without requiring Snapper
+commands for everyday tasks. View, diff, create, restore, boot into, and delete
+snapshots from a compact, keyboard-first panel.
 
 ## Features
 
