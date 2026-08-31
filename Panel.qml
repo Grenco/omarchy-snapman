@@ -701,6 +701,7 @@ Panel {
               anchors.right: parent.right
               anchors.verticalCenter: parent.verticalCenter
               text: "Cleanup"
+              tooltipText: "Retention policy and bulk delete (S)"
               foreground: root.foreground
               accent: Color.accent
               fontFamily: root.fontFamily
@@ -733,6 +734,7 @@ Panel {
             }
             Button {
               text: "Update"
+              tooltipText: "Fetch and apply the update after review"
               foreground: root.foreground
               accent: Color.accent
               fontFamily: root.fontFamily
@@ -744,6 +746,7 @@ Panel {
             }
             Button {
               text: "Diff"
+              tooltipText: "View the changes on GitHub"
               foreground: root.foreground
               fontFamily: root.fontFamily
               fontSize: Style.font.caption
@@ -754,6 +757,7 @@ Panel {
             }
             Button {
               text: "Store"
+              tooltipText: "Open the plugin's marketplace page"
               foreground: root.foreground
               fontFamily: root.fontFamily
               fontSize: Style.font.caption
@@ -791,6 +795,7 @@ Panel {
 
           Button {
             text: "New"
+            tooltipText: "Create a snapshot (C)"
             foreground: root.foreground
             fontFamily: root.fontFamily
             fontSize: Style.font.caption
@@ -801,6 +806,7 @@ Panel {
           }
           Button {
             text: "Diff"
+            tooltipText: "Compare this snapshot with the live filesystem (D)"
             foreground: root.foreground
             fontFamily: root.fontFamily
             fontSize: Style.font.caption
@@ -812,6 +818,7 @@ Panel {
           }
           Button {
             text: "Boot"
+            tooltipText: "Boot into this snapshot at the next restart (B)"
             foreground: root.foreground
             fontFamily: root.fontFamily
             fontSize: Style.font.caption
@@ -823,6 +830,7 @@ Panel {
           }
           Button {
             text: "Restore"
+            tooltipText: "Restore changed files into the live system (R)"
             foreground: root.foreground
             fontFamily: root.fontFamily
             fontSize: Style.font.caption
@@ -834,6 +842,9 @@ Panel {
           }
           Button {
             text: root.hasSelection && root.isPersistent(root.selected) ? "Unpin" : "Pin"
+            tooltipText: root.hasSelection && root.isPersistent(root.selected)
+              ? "Remove retention protection (P)"
+              : "Protect from retention cleanup (P)"
             foreground: root.foreground
             accent: Color.accent
             fontFamily: root.fontFamily
@@ -846,6 +857,7 @@ Panel {
           }
           Button {
             text: "Delete"
+            tooltipText: "Delete this snapshot (X)"
             foreground: root.foreground
             accent: Color.urgent
             fontFamily: root.fontFamily
@@ -858,6 +870,7 @@ Panel {
           }
           Button {
             text: "Refresh"
+            tooltipText: "Reload the snapshot list (G)"
             foreground: root.foreground
             fontFamily: root.fontFamily
             fontSize: Style.font.caption
@@ -976,18 +989,17 @@ Panel {
                 }
 
                 Text {
-                  width: Style.space(24)
+                  width: Style.space(16)
                   anchors.verticalCenter: parent.verticalCenter
-                  text: "PIN"
+                  text: "\uF2CA"
                   visible: root.isPersistent(modelData)
                   color: Color.accent
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.caption
-                  font.bold: true
+                  font.pixelSize: Style.font.bodySmall
                 }
 
                 Column {
-                  width: parent.width - Style.space(30) - Style.space(12) - Style.space(6) - (root.isPersistent(modelData) ? Style.space(24) + Style.space(6) : 0) - (sizeText.visible ? sizeText.width + Style.space(6) : 0) - Style.space(16)
+                  width: parent.width - Style.space(30) - Style.space(12) - Style.space(6) - (root.isPersistent(modelData) ? Style.space(16) + Style.space(6) : 0) - (sizeText.visible ? sizeText.width + Style.space(6) : 0) - Style.space(16)
                   anchors.verticalCenter: parent.verticalCenter
                   Text {
                     width: parent.width
@@ -1068,6 +1080,7 @@ Panel {
               spacing: Style.space(6)
               Button {
                 text: "Retention policy"
+                tooltipText: "Set count or age retention (H/L)"
                 selected: root.cleanupTab === "retention"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
@@ -1079,6 +1092,7 @@ Panel {
               }
               Button {
                 text: "Bulk delete"
+                tooltipText: "One-shot bulk delete (H/L)"
                 selected: root.cleanupTab === "bulk"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
