@@ -788,12 +788,12 @@ Panel {
               required property var modelData
               required property int index
               readonly property bool isSelected: index === root.selectedIndex
-              readonly property color rowForeground: isSelected ? Style.selectedStateColor(root.foreground, Color.accent, false) : root.foreground
-              readonly property color rowMuted: isSelected ? Style.selectedStateColor(root.muted, Color.accent, false) : root.muted
+              readonly property color rowForeground: isSelected ? Qt.darker(Color.accent, 3.0) : root.foreground
+              readonly property color rowMuted: isSelected ? Qt.darker(Color.accent, 2.2) : root.muted
               width: ListView.view.width
               height: Style.space(36)
               radius: 4
-              color: isSelected ? Style.selectedFillFor(root.foreground, Color.accent, false) : "transparent"
+              color: isSelected ? Qt.lighter(Color.accent, 1.15) : "transparent"
 
               Row {
                 anchors.fill: parent
