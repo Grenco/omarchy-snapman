@@ -443,17 +443,17 @@ Panel {
     retentionLauncher.command = ["omarchy-launch-floating-terminal-with-presentation", sudoCmd]
     retentionLauncher.startDetached()
 
-    var content = "RETENTION_MODE=" + root.retentionMode + "\nRETENTION_VALUE=" + value + "\n"
     var pluginDir = "\"$HOME/.config/omarchy/plugins/grenco.snapman\""
+    var writeConfig = "bash " + pluginDir + "/scripts/snapman-write-config " + root.retentionMode + " " + value
     if (root.retentionMode === "age") {
       supportProcess.command = ["sh", "-c",
-        "printf '" + content + "' > \"$HOME/.config/omarchy/snapman.conf\" && " +
+        writeConfig + " && " +
         "bash " + pluginDir + "/scripts/install-support.sh && " +
         "systemctl --user enable --now snapman-retention.timer >/dev/null 2>&1 && " +
         "\"$HOME/.local/bin/snapman-retention\""]
     } else {
       supportProcess.command = ["sh", "-c",
-        "printf '" + content + "' > \"$HOME/.config/omarchy/snapman.conf\" && " +
+        writeConfig + " && " +
         "systemctl --user disable --now snapman-retention.timer >/dev/null 2>&1; true"]
     }
     supportProcess.running = true
