@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "grenco.snapman",
   "name": "Snapman: Snapshot Manager",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": "Grenco",
   "description": "Keep Snapper recovery points visible, useful, and under control from the Omarchy bar, without memorizing commands or letting old snapshots fill your disk.",
   "kinds": ["bar-widget"],
