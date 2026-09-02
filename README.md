@@ -40,9 +40,9 @@ and the daily age-based timer skips it. Unpin to let it age out normally.
 
 ### Update awareness
 
-When an update is available, the panel shows a verification label and offers
-**Diff** to preview the changes on GitHub and **Update** to apply the
-fast-forward directly. **Store** keeps the marketplace page one click away.
+Snapman offers **Diff**, **Update**, and **Store** only when the fetched commit
+exactly matches the marketplace's verified snapshot. Updates without that
+verification are not offered from the panel.
 
 ## Requirements
 

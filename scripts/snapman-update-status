@@ -28,8 +28,9 @@ verification_verified="false"
 catalog=$(curl --connect-timeout 3 --max-time 8 -fsSL "$catalog_url" 2>/dev/null || true)
 if [[ -n "$catalog" ]]; then
   verification_status=$(jq -r '.plugins[] | select(.id == "grenco.snapman") | .verificationStatus // "unverified"' <<<"$catalog")
+  verification_snapshot_status=$(jq -r '.plugins[] | select(.id == "grenco.snapman") | .verificationSnapshotStatus // "unverified"' <<<"$catalog")
   verification_commit=$(jq -r '.plugins[] | select(.id == "grenco.snapman") | .verificationCommit // ""' <<<"$catalog")
-  if [[ "$verification_status" == "verified" && "$verification_commit" == "$remote_commit" ]]; then
+  if [[ "$verification_status" == "verified" && "$verification_snapshot_status" == "verified" && "$verification_commit" == "$remote_commit" ]]; then
     verification_label="Snapshot verified"
     verification_verified="true"
   elif [[ "$verification_status" == "verified" && -n "$verification_commit" ]]; then

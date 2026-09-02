@@ -55,6 +55,7 @@ Panel {
   readonly property bool hasSelection: filteredSnapshots.length > 0 && selectedIndex >= 0 && selectedIndex < filteredSnapshots.length
   readonly property var selected: hasSelection ? filteredSnapshots[selectedIndex] : null
   readonly property bool inputActive: filterField.activeFocus || descriptionField.activeFocus
+  readonly property bool verifiedUpdateAvailable: updateState === "available" && verificationVerified
   readonly property color foreground: bar ? bar.foreground : Color.foreground
   readonly property color muted: Qt.darker(foreground, 1.5)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
@@ -152,6 +153,7 @@ Panel {
   }
 
   function applyUpdate() {
+    if (!verifiedUpdateAvailable) return
     updateLauncher.command = [
       "omarchy-launch-floating-terminal-with-presentation",
       "omarchy plugin update grenco.snapman --yes"
@@ -721,7 +723,7 @@ Panel {
           Flow {
             width: parent.width
             spacing: Style.space(6)
-            visible: root.updateState === "available"
+            visible: root.verifiedUpdateAvailable
 
             Text {
               height: Style.space(20)
