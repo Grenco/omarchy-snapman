@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config="$HOME/.config/omarchy/snapman.conf"
+
+# Only a small regular file is valid policy state. The no-follow read below
+# covers a path replacement after these checks.
+if [[ -L "$config" || ! -f "$config" ]]; then
+  exit 0
+fi
+
+timeout 1s dd if="$config" iflag=nofollow,nonblock bs=4096 count=1 status=none 2>/dev/null || true

@@ -566,7 +566,7 @@ Panel {
 
   Process {
     id: retentionReadProcess
-    command: ["sh", "-c", "cat \"$HOME/.config/omarchy/snapman.conf\" 2>/dev/null || true"]
+    command: ["sh", "-c", "bash \"$HOME/.config/omarchy/plugins/grenco.snapman/scripts/snapman-read-config\""]
     stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.parseRetentionConf(text) }
     stderr: StdioCollector { waitForEnd: true }
   }
