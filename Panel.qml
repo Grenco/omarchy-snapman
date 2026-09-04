@@ -97,11 +97,18 @@ Panel {
   }
 
   function isBootable(s) {
-    return bootableById[String(Number(s.number))] === true
+    var number = snapshotNumber(s ? s.number : null)
+    return number > 0 && bootableById[String(number)] === true
   }
 
   function isPersistent(s) {
     return !!s && !!s.userdata && String(s.userdata.important) === "yes"
+  }
+
+  function snapshotNumber(value) {
+    var number = Number(value)
+    if (!isFinite(number) || Math.floor(number) !== number || number <= 0) return -1
+    return number
   }
 
   function defaultHint() {
@@ -189,7 +196,7 @@ Panel {
     try {
       var document = JSON.parse(raw)
       var rows = document.root || []
-      snapshots = rows.filter(function(row) { return Number(row.number) !== 0 }).reverse()
+      snapshots = rows.filter(function(row) { return root.snapshotNumber(row.number) > 0 }).reverse()
       selectedIndex = Math.max(0, Math.min(selectedIndex, filteredSnapshots.length - 1))
       if (hasSelection) previewSelected()
       else changes = "No stored snapshots. Press C to create one."
@@ -205,8 +212,8 @@ Panel {
       var doc = JSON.parse(raw)
       var entries = doc.snapshotEntries || []
       for (var i = 0; i < entries.length; i++) {
-        var id = entries[i] && entries[i].snapperID ? Number(entries[i].snapperID.snapshotID) : -1
-        if (id >= 0) map[String(id)] = true
+        var id = entries[i] && entries[i].snapperID ? snapshotNumber(entries[i].snapperID.snapshotID) : -1
+        if (id > 0) map[String(id)] = true
       }
     } catch (e) {}
     bootableById = map
@@ -237,7 +244,11 @@ Panel {
 
   function previewSelected() {
     if (!selected) return
-    var number = Number(selected.number)
+    var number = snapshotNumber(selected.number)
+    if (number < 1) {
+      statusMessage = "Invalid snapshot identifier."
+      return
+    }
     if (changesBySnapshot[number] !== undefined) {
       changes = changesBySnapshot[number]
       return
@@ -288,35 +299,44 @@ Panel {
 
   function requestDelete() {
     if (!selected) return
+    var number = snapshotNumber(selected.number)
+    if (number < 1) { statusMessage = "Invalid snapshot identifier."; return }
     clearInputFocus()
     pendingAction = "delete"
-    pendingSnapshotNumber = Number(selected.number)
+    pendingSnapshotNumber = number
     statusMessage = ""
   }
 
   function requestRestore() {
     if (!selected) return
+    var number = snapshotNumber(selected.number)
+    if (number < 1) { statusMessage = "Invalid snapshot identifier."; return }
     clearInputFocus()
     pendingAction = "restore"
-    pendingSnapshotNumber = Number(selected.number)
+    pendingSnapshotNumber = number
   }
 
   function requestBootNext() {
     if (!selected) return
+    var number = snapshotNumber(selected.number)
+    if (number < 1) { statusMessage = "Invalid snapshot identifier."; return }
     bootLauncher.command = [
       "omarchy-launch-floating-terminal-with-presentation",
-      "sudo limine-snapper-restore --kernels " + String(selected.number)
+      "sudo limine-snapper-restore --kernels " + String(number)
     ]
     bootLauncher.startDetached()
-    statusMessage = "Prepared snapshot #" + selected.number + " to boot — pick it in the Limine menu at the next restart."
+    statusMessage = "Prepared snapshot #" + number + " to boot — pick it in the Limine menu at the next restart."
   }
 
   function confirmAction() {
     if (pendingAction === "") return
-    if (pendingAction === "delete" && pendingSnapshotNumber >= 0)
-      runAction(["snapper", "-c", "root", "delete", String(pendingSnapshotNumber)], "Deleted snapshot #" + pendingSnapshotNumber + ".")
-    else if (pendingAction === "restore" && pendingSnapshotNumber >= 0)
-      runAction(["snapper", "-c", "root", "undochange", String(pendingSnapshotNumber) + "..0"], "Restored changes from snapshot #" + pendingSnapshotNumber + ".")
+    var number = snapshotNumber(pendingSnapshotNumber)
+    if ((pendingAction === "delete" || pendingAction === "restore") && number < 1)
+      statusMessage = "Invalid snapshot identifier."
+    else if (pendingAction === "delete")
+      runAction(["snapper", "-c", "root", "delete", String(number)], "Deleted snapshot #" + number + ".")
+    else if (pendingAction === "restore")
+      runAction(["snapper", "-c", "root", "undochange", String(number) + "..0"], "Restored changes from snapshot #" + number + ".")
     else if (pendingAction === "bulk")
       runAction(["snapper", "-c", "root", "delete"].concat(pendingBulkNumbers.map(function(n) { return String(n) })), "Deleted " + pendingBulkCount + " snapshot" + (pendingBulkCount === 1 ? "" : "s") + ".")
     pendingAction = ""
@@ -345,7 +365,8 @@ Panel {
 
   function togglePersistent() {
     if (!selected || persistProcess.running) return
-    var number = Number(selected.number)
+    var number = snapshotNumber(selected.number)
+    if (number < 1) { statusMessage = "Invalid snapshot identifier."; return }
     var pin = !isPersistent(selected)
     statusMessage = "Working..."
     persistProcess.successMessage = (pin ? "Pinned" : "Unpinned") + " snapshot #" + number + " against retention cleanup."
@@ -355,9 +376,11 @@ Panel {
 
   function openFullDiff() {
     if (!selected) return
+    var number = snapshotNumber(selected.number)
+    if (number < 1) { statusMessage = "Invalid snapshot identifier."; return }
     diffLauncher.command = [
       "omarchy-launch-floating-terminal-with-presentation",
-      "snapper -c root diff " + String(selected.number) + "..0 | less -R"
+      "snapper -c root diff " + String(number) + "..0 | LESSSECURE=1 less"
     ]
     diffLauncher.startDetached()
   }
@@ -407,10 +430,14 @@ Panel {
     var lines = String(raw || "").split("\n")
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i]
-      if (line.indexOf("RETENTION_MODE=") === 0) root.retentionMode = line.slice(15).trim() || "count"
+      if (line.indexOf("RETENTION_MODE=") === 0) {
+        var mode = line.slice(15).trim()
+        root.retentionMode = mode === "count" || mode === "age" ? mode : "count"
+      }
       else if (line.indexOf("RETENTION_VALUE=") === 0) {
-        var v = parseInt(line.slice(16).trim(), 10)
-        if (isFinite(v)) {
+        var rawValue = line.slice(16).trim()
+        if (/^[1-9][0-9]*$/.test(rawValue)) {
+          var v = Number(rawValue)
           if (root.retentionMode === "count") root.retentionCountValue = Math.max(1, Math.min(20, v))
           else root.retentionAgeValue = Math.max(1, Math.min(365, v))
         }
@@ -464,10 +491,11 @@ Panel {
 
   function requestBulkDelete() {
     var targets = bulkTargets(root.bulkMode, root.bulkMode === "age" ? root.bulkAgeValue : root.bulkCountValue)
-    if (!targets.length) { statusMessage = "Nothing matches — no snapshots to delete."; return }
+    var numbers = targets.map(function(s) { return snapshotNumber(s.number) }).filter(function(number) { return number > 0 })
+    if (!numbers.length) { statusMessage = "Nothing matches — no snapshots to delete."; return }
     pendingAction = "bulk"
-    pendingBulkNumbers = targets.map(function(s) { return Number(s.number) })
-    pendingBulkCount = targets.length
+    pendingBulkNumbers = numbers
+    pendingBulkCount = numbers.length
     statusMessage = ""
   }
 
@@ -729,6 +757,7 @@ Panel {
               height: Style.space(20)
               verticalAlignment: Text.AlignVCenter
               text: "Snapman " + (root.availableVersion ? "v" + root.availableVersion : "update") + " available  ·  " + root.verificationLabel
+              textFormat: Text.PlainText
               color: root.verificationVerified ? Color.accent : Color.urgent
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
@@ -975,6 +1004,7 @@ Panel {
                   width: Style.space(30)
                   anchors.verticalCenter: parent.verticalCenter
                   text: "#" + modelData.number
+                  textFormat: Text.PlainText
                   color: rowForeground
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.bodySmall
@@ -1006,6 +1036,7 @@ Panel {
                   Text {
                     width: parent.width
                     text: modelData.description || "Untitled snapshot"
+                    textFormat: Text.PlainText
                     color: rowForeground
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.bodySmall
@@ -1014,6 +1045,7 @@ Panel {
                   Text {
                     width: parent.width
                     text: (root.relativeAge(modelData.date) ? root.relativeAge(modelData.date) + " · " : "") + (modelData.date || "Unknown date")
+                    textFormat: Text.PlainText
                     color: rowMuted
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
@@ -1025,6 +1057,7 @@ Panel {
                   id: sizeText
                   anchors.verticalCenter: parent.verticalCenter
                   text: root.formatSize(modelData["used-space"])
+                  textFormat: Text.PlainText
                   visible: text !== ""
                   color: rowMuted
                   font.family: root.fontFamily
@@ -1049,6 +1082,7 @@ Panel {
           visible: !root.cleanupMode
           Text {
             text: root.selected ? "CHANGES: SNAPSHOT #" + root.selected.number + " -> LIVE" : "CHANGES"
+            textFormat: Text.PlainText
             color: root.foreground
             font.family: root.fontFamily
             font.pixelSize: Style.font.bodySmall
@@ -1059,6 +1093,7 @@ Panel {
             width: parent.width
             height: Style.space(100)
             text: root.changes
+            textFormat: Text.PlainText
             color: root.muted
             font.family: "monospace"
             font.pixelSize: Style.font.caption
@@ -1190,6 +1225,7 @@ Panel {
                 text: root.retentionMode === "count"
                   ? root.retentionCountValue + " snapshots"
                   : root.retentionAgeValue + " days"
+                textFormat: Text.PlainText
                 color: root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
@@ -1201,6 +1237,7 @@ Panel {
             Text {
               width: parent.width
               text: root.retentionPreview()
+              textFormat: Text.PlainText
               color: root.muted
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
@@ -1309,6 +1346,7 @@ Panel {
             Text {
               width: parent.width
               text: root.bulkPreview()
+              textFormat: Text.PlainText
               color: root.muted
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
@@ -1334,6 +1372,7 @@ Panel {
         Text {
           width: parent.width
           text: root.statusMessage || (root.cleanupMode ? root.cleanupHint() : root.defaultHint())
+          textFormat: Text.PlainText
           color: root.statusMessage ? Color.accent : root.muted
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption

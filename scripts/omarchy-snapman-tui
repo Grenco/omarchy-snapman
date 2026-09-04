@@ -21,7 +21,7 @@ pause() {
 run_paged() {
   clear
   printf '%s\n\n' "$title"
-  "$@" 2>&1 | less -R
+  "$@" 2>&1 | LESSSECURE=1 less
 }
 
 message() {
