@@ -4,7 +4,6 @@ set -euo pipefail
 PLUGIN_DIR="${SNAPMAN_PLUGIN_DIR:-$HOME/.config/omarchy/plugins/grenco.snapman}"
 
 mkdir -p "$HOME/.local/bin"
-install -m 0755 "$PLUGIN_DIR/scripts/snapman-retention" "$HOME/.local/bin/snapman-retention"
 install -m 0755 "$PLUGIN_DIR/scripts/omarchy-snapman-tui" "$HOME/.local/bin/omarchy-snapman-tui"
 
 mkdir -p "$HOME/.config/systemd/user"

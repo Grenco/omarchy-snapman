@@ -1,6 +1,7 @@
 [Unit]
 Description=Snapman snapshot retention cleanup
+ConditionPathExists=%h/.config/omarchy/plugins/grenco.snapman/scripts/snapman-retention
 
 [Service]
 Type=oneshot
-ExecStart=%h/.local/bin/snapman-retention
+ExecStart=%h/.config/omarchy/plugins/grenco.snapman/scripts/snapman-retention

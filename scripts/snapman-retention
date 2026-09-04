@@ -10,12 +10,14 @@ value=$(sed -n 's/^RETENTION_VALUE=//p' "$conf" | tr -d '[:space:]')
 
 case "$mode" in
 count)
+  [[ "$value" =~ ^[1-9][0-9]*$ && "$value" -le 20 ]] || exit 0
   # The authoritative count policy lives in /etc/snapper/configs/root and is
   # enforced with root by `omarchy update`. This is only a safety net for
   # count-based retention in case the config was never written.
   snapper -c root cleanup number >/dev/null 2>&1 || true
   ;;
 age)
+  [[ "$value" =~ ^[1-9][0-9]*$ && "$value" -le 365 ]] || exit 0
   cutoff=$(date -d "now - ${value} days" +%s 2>/dev/null) || exit 0
   to_delete=()
   while IFS=$'\t' read -r num date; do

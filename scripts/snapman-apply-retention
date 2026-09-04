@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+mode="${1:-}"
+value="${2:-}"
+plugin_dir="${SNAPMAN_PLUGIN_DIR:-$HOME/.config/omarchy/plugins/grenco.snapman}"
+
+case "$mode" in
+count | age) ;;
+*)
+  printf 'Snapman: invalid retention mode.\n' >&2
+  exit 2
+  ;;
+esac
+
+if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+  printf 'Snapman: invalid retention value.\n' >&2
+  exit 2
+fi
+
+if [[ "$mode" == "count" && "$value" -gt 20 ]]; then
+  printf 'Snapman: count retention must be between 1 and 20.\n' >&2
+  exit 2
+fi
+
+if [[ "$mode" == "age" && "$value" -gt 365 ]]; then
+  printf 'Snapman: age retention must be between 1 and 365 days.\n' >&2
+  exit 2
+fi
+
+limit="$value"
+if [[ "$mode" == "age" ]]; then
+  limit=999
+fi
+
+sudo sed -i \
+  -e "s/^NUMBER_LIMIT=.*/NUMBER_LIMIT=\"$limit\"/" \
+  -e 's/^NUMBER_LIMIT_IMPORTANT=.*/NUMBER_LIMIT_IMPORTANT="999"/' \
+  /etc/snapper/configs/root
+sudo snapper -c root cleanup number
+
+"$plugin_dir/scripts/snapman-write-config" "$mode" "$value"
+"$plugin_dir/scripts/install-support.sh"
+
+if [[ "$mode" == "age" ]]; then
+  systemctl --user enable --now snapman-retention.timer
+  "$plugin_dir/scripts/snapman-retention"
+else
+  systemctl --user disable --now snapman-retention.timer >/dev/null 2>&1 || true
+fi

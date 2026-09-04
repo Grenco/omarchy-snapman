@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
@@ -56,6 +57,8 @@ Panel {
   readonly property var selected: hasSelection ? filteredSnapshots[selectedIndex] : null
   readonly property bool inputActive: filterField.activeFocus || descriptionField.activeFocus
   readonly property bool verifiedUpdateAvailable: updateState === "available" && verificationVerified
+  readonly property string homeDir: String(Quickshell.env("HOME") || "")
+  readonly property string pluginDir: homeDir + "/.config/omarchy/plugins/grenco.snapman"
   readonly property color foreground: bar ? bar.foreground : Color.foreground
   readonly property color muted: Qt.darker(foreground, 1.5)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
@@ -134,6 +137,10 @@ Panel {
   function switchPanel(direction) {
     if (bar && typeof bar.switchPanelFrom === "function") return bar.switchPanelFrom(barIdentity, direction)
     return false
+  }
+
+  function shellQuote(value) {
+    return "'" + String(value).replace(/'/g, "'\\''") + "'"
   }
 
   function checkForUpdates(force) {
@@ -464,26 +471,13 @@ Panel {
   }
 
   function applyRetention() {
-    var value = root.retentionMode === "count" ? root.retentionCountValue : root.retentionAgeValue
-    var limit = root.retentionMode === "count" ? value : 999
-    var sudoCmd = "sudo sed -i 's/^NUMBER_LIMIT=.*/NUMBER_LIMIT=\"" + limit + "\"/; s/^NUMBER_LIMIT_IMPORTANT=.*/NUMBER_LIMIT_IMPORTANT=\"999\"/' /etc/snapper/configs/root && sudo snapper -c root cleanup number"
-    retentionLauncher.command = ["omarchy-launch-floating-terminal-with-presentation", sudoCmd]
+    var mode = root.retentionMode === "age" ? "age" : "count"
+    var value = mode === "count" ? root.retentionCountValue : root.retentionAgeValue
+    retentionLauncher.command = [
+      "omarchy-launch-floating-terminal-with-presentation",
+      "bash " + shellQuote(pluginDir + "/scripts/snapman-apply-retention") + " " + mode + " " + String(value)
+    ]
     retentionLauncher.startDetached()
-
-    var pluginDir = "\"$HOME/.config/omarchy/plugins/grenco.snapman\""
-    var writeConfig = "bash " + pluginDir + "/scripts/snapman-write-config " + root.retentionMode + " " + value
-    if (root.retentionMode === "age") {
-      supportProcess.command = ["sh", "-c",
-        writeConfig + " && " +
-        "bash " + pluginDir + "/scripts/install-support.sh && " +
-        "systemctl --user enable --now snapman-retention.timer >/dev/null 2>&1 && " +
-        "\"$HOME/.local/bin/snapman-retention\""]
-    } else {
-      supportProcess.command = ["sh", "-c",
-        writeConfig + " && " +
-        "systemctl --user disable --now snapman-retention.timer >/dev/null 2>&1; true"]
-    }
-    supportProcess.running = true
 
     statusMessage = "Retention applied — trimming snapshots in the terminal."
     postApplyTimer.restart()
@@ -577,7 +571,7 @@ Panel {
 
   Process {
     id: updateCheckProcess
-    command: ["sh", "-c", "bash \"$HOME/.config/omarchy/plugins/grenco.snapman/scripts/snapman-update-status\""]
+    command: ["bash", root.pluginDir + "/scripts/snapman-update-status"]
     stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.updateOutput = text }
     stderr: StdioCollector { waitForEnd: true }
     onExited: function(exitCode) {
@@ -594,7 +588,7 @@ Panel {
 
   Process {
     id: retentionReadProcess
-    command: ["sh", "-c", "bash \"$HOME/.config/omarchy/plugins/grenco.snapman/scripts/snapman-read-config\""]
+    command: ["bash", root.pluginDir + "/scripts/snapman-read-config"]
     stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.parseRetentionConf(text) }
     stderr: StdioCollector { waitForEnd: true }
   }
@@ -615,14 +609,6 @@ Panel {
     stdout: StdioCollector { waitForEnd: true }
     stderr: StdioCollector { waitForEnd: true }
     onExited: function(code) { root.ageTimerActive = code === 0 }
-  }
-
-  Process {
-    id: supportProcess
-    stderr: StdioCollector { waitForEnd: true; onStreamFinished: root.statusMessage = String(text).trim() || root.statusMessage }
-    onExited: function(code) {
-      root.refresh(true)
-    }
   }
 
   Process { id: retentionLauncher }
