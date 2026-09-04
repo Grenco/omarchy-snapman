@@ -40,7 +40,7 @@ sudo sed -i \
 sudo snapper -c root cleanup number
 
 "$plugin_dir/scripts/snapman-write-config" "$mode" "$value"
-"$plugin_dir/scripts/install-support.sh"
+bash "$plugin_dir/scripts/install-support.sh"
 
 if [[ "$mode" == "age" ]]; then
   systemctl --user enable --now snapman-retention.timer
