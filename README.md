@@ -42,7 +42,8 @@ and the daily age-based timer skips it. Unpin to let it age out normally.
 
 Snapman offers **Diff**, **Update**, and **Store** only when the fetched commit
 exactly matches the marketplace's verified snapshot. Updates without that
-verification are not offered from the panel.
+verification are not offered from the panel, and the check is repeated just
+before an update starts.
 
 ## Requirements
 
@@ -66,8 +67,14 @@ The plugin id is `grenco.snapman`. Enable it later with
 ## Snapper user access (one-time, with sudo)
 
 Snapman performs create/delete/bulk operations without a password, but snapper
-only grants that to users listed in the `root` config's `ALLOW_USERS`. Omarchy
-does not add this by default, so set it up once:
+only grants that to users listed in the `root` config's `ALLOW_USERS`. This is
+broad access to snapshots for the `root` config, including creating, deleting,
+and changing snapshots. Add only trusted local accounts. `SYNC_ACL="yes"`
+propagates that access to snapshots; it is not a substitute for restricting who
+can use the machine.
+
+Snapman never changes `ALLOW_USERS`, sudoers, Polkit, or PAM. Omarchy does not
+add this access by default, so choose and run this one-time setup yourself:
 
 ```sh
 sudo snapper -c root create-config /          # only if /etc/snapper/configs/root is missing
@@ -76,9 +83,8 @@ sudo snapper -c root set-config SYNC_ACL="yes"
 ```
 
 `snapperd` is D-Bus-activated and starts on demand — there is nothing to enable.
-If this step is skipped, creates/deletes will prompt for your password, and the
-plugin's retention installer prints a reminder pointing back here. Editing the
-retention policy still prompts for sudo, because it rewrites
+If this step is skipped, snapshot actions can fail or prompt for authorization.
+Editing the retention policy still prompts for sudo, because it rewrites
 `/etc/snapper/configs/root`.
 
 ## Removal
@@ -92,9 +98,8 @@ does not remove them. To clean those up as well:
 
 ```sh
 systemctl --user disable --now snapman-retention.timer
-rm -f ~/.local/bin/snapman-retention \
-      ~/.local/bin/omarchy-snapman-tui \
-      ~/.config/systemd/user/snapman-retention.service \
+rm -f ~/.local/bin/omarchy-snapman-tui \
+       ~/.config/systemd/user/snapman-retention.service \
       ~/.config/systemd/user/snapman-retention.timer
 rm -f ~/.config/omarchy/snapman.conf   # saved retention policy (optional)
 systemctl --user daemon-reload
@@ -112,9 +117,12 @@ In the Cleanup view: `H`/`L` switch tabs, `Esc` or **← Close** goes back.
 ## Notes
 
 - Applying age-based retention installs a small user systemd timer
-  (`snapman-retention.timer`, daily at 06:00) and a helper script under
-  `~/.local/bin/snapman-retention`. Count mode disables the timer.
+  (`snapman-retention.timer`, daily at 06:00). Its unit executes the retention
+  script from the installed plugin, so plugin updates take effect without a
+  stale copied helper. Count mode disables the timer.
 - Policy state is kept in `~/.config/omarchy/snapman.conf`.
+- Run `tests/security-regression.sh` to exercise the verified-update gate and
+  retention input bounds.
 
 ## License
 
