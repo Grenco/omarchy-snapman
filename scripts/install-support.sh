@@ -13,7 +13,7 @@ install -m 0644 "$PLUGIN_DIR/scripts/snapman-retention.timer" "$HOME/.config/sys
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 
 if [[ -f /etc/snapper/configs/root ]] && ! grep -q '^ALLOW_USERS=' /etc/snapper/configs/root; then
-  echo "Snapman hint: snapper has no ALLOW_USERS set, so creates/deletes will prompt for sudo." >&2
+  echo "Snapman hint: your user may need ALLOW_USERS access for passwordless snapshot actions." >&2
   echo "  Grant your user passwordless snapshot access once with:" >&2
   echo "    sudo snapper -c root set-config ALLOW_USERS=\"$USER\"" >&2
 fi
