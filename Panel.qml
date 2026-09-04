@@ -170,7 +170,7 @@ Panel {
     if (!verifiedUpdateAvailable) return
     updateLauncher.command = [
       "omarchy-launch-floating-terminal-with-presentation",
-      "omarchy plugin update grenco.snapman --yes"
+      "bash " + shellQuote(pluginDir + "/scripts/snapman-apply-update")
     ]
     updateLauncher.startDetached()
   }

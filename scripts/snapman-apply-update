@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+plugin_dir="${SNAPMAN_PLUGIN_DIR:-$HOME/.config/omarchy/plugins/grenco.snapman}"
+status=$("$plugin_dir/scripts/snapman-update-status")
+
+if [[ $(jq -r '.state // "error"' <<<"$status") != "available" ]] || [[ $(jq -r '.verificationVerified // false' <<<"$status") != "true" ]]; then
+  printf 'Snapman: update was not applied because the latest catalog check is not verified.\n' >&2
+  exit 1
+fi
+
+exec omarchy plugin update grenco.snapman
